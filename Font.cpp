@@ -4,21 +4,21 @@
 #include <glm/gtx/transform.hpp>
 
 constexpr int ProjectionLocation = 0;
-constexpr int ModelLocation = 4;
-constexpr int SamplesLocation = 8;
-constexpr int ColorsLocation = 14;
+constexpr int ModelLocation = 1;
+constexpr int SamplesLocation = 2;
+constexpr int ColorsLocation = 3;
 
 constexpr const char* VertexShader = R"shader(
-#version 430
+#version 410
 
 layout(location = 0) in vec4 position;
 
 out vec2 polar;
 flat out int id;
 
-layout(location = 0) uniform mat4 projection;
-layout(location = 4) uniform mat4 model;
-layout(location = 8) uniform vec2 samples[6];
+uniform mat4 projection;
+uniform mat4 model;
+uniform vec2 samples[6];
 
 void main()
 {
@@ -31,13 +31,13 @@ void main()
 )shader";
 
 constexpr const char* SimpleShader = R"shader(
-#version 430
+#version 410
 
 flat in int id;
 
 layout(location = 0) out vec4 color;
 
-layout(location = 14) uniform vec4 colors[6];
+uniform vec4 colors[6];
 
 void main()
 {
@@ -46,14 +46,14 @@ void main()
 )shader";
 
 constexpr const char* BezierShader = R"shader(
-#version 430
+#version 410
 
 in vec2 polar;
 flat in int id;
 
 layout(location = 0) out vec4 color;
 
-layout(location = 14) uniform vec4 colors[6];
+uniform vec4 colors[6];
 
 void main()
 {
@@ -77,6 +77,9 @@ Font::Font() :
         !simpleProgram.Link(vertex, simple) ||
         !bezierProgram.Link(vertex, bezier))
         exit(-1);
+
+    simpleProgram.PrepareLocations({"projection", "model", "samples", "colors"});
+    bezierProgram.PrepareLocations({"projection", "model", "samples", "colors"});
 }
 
 Font::~Font()
@@ -178,10 +181,9 @@ void Font::Print(float x, float y, const char* str, const float* colors, const f
     glUseProgram(bezierProgram);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, triangleBuffer);
 
-    glUniformMatrix4fv(ProjectionLocation, 1, GL_FALSE , &renderer.Projection()[0][0]);
-    
-    glUniform4fv(ColorsLocation, count, colors);
-    glUniform2fv(SamplesLocation, count, samples);
+    glUniformMatrix4fv(bezierProgram[ProjectionLocation], 1, GL_FALSE , &renderer.Projection()[0][0]);
+    glUniform4fv(bezierProgram[ColorsLocation], count, colors);
+    glUniform2fv(bezierProgram[SamplesLocation], count, samples);
 
     renderer.Push();
     renderer.Multiply(glm::translate(glm::vec3(x, y, 0.f)));
@@ -193,7 +195,7 @@ void Font::Print(float x, float y, const char* str, const float* colors, const f
         if (!HasGlyph(str[i]))
             continue;
 
-        glUniformMatrix4fv(ModelLocation, 1, GL_FALSE, &renderer.Model()[0][0]);
+        glUniformMatrix4fv(bezierProgram[ModelLocation], 1, GL_FALSE, &renderer.Model()[0][0]);
 
         Glyph& g = glyphs[str[i]];
 
@@ -208,9 +210,9 @@ void Font::Print(float x, float y, const char* str, const float* colors, const f
     glUseProgram(simpleProgram);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, fanBuffer);
 
-    glUniformMatrix4fv(ProjectionLocation, 1, GL_FALSE, &renderer.Projection()[0][0]);
-    glUniform4fv(ColorsLocation, count, colors);
-    glUniform2fv(SamplesLocation, count, samples);
+    glUniformMatrix4fv(simpleProgram[ProjectionLocation], 1, GL_FALSE, &renderer.Projection()[0][0]);
+    glUniform4fv(simpleProgram[ColorsLocation], count, colors);
+    glUniform2fv(simpleProgram[SamplesLocation], count, samples);
 
     renderer.Push();
 
@@ -219,7 +221,7 @@ void Font::Print(float x, float y, const char* str, const float* colors, const f
         if (!HasGlyph(str[i]))
             continue;
 
-        glUniformMatrix4fv(ModelLocation, 1, GL_FALSE, &renderer.Model()[0][0]);
+        glUniformMatrix4fv(simpleProgram[ModelLocation], 1, GL_FALSE, &renderer.Model()[0][0]);
 
         Glyph& g = glyphs[str[i]];
 

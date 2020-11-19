@@ -30,6 +30,12 @@ bool Program::Link(Shader& vertex, Shader& fragment)
     return true;
 }
 
+void Program::PrepareLocations(initializer_list<const GLchar*> names)
+{
+    for (auto& n : names)
+        uniforms.push_back(glGetUniformLocation(id, n));
+}
+
 GLint Program::CheckStatus(GLenum name)
 {
     GLint status;

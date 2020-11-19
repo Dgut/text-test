@@ -6,7 +6,7 @@
 using namespace glm;
 
 constexpr const char* VertexShader = R"shader(
-#version 430
+#version 410
 
 layout(location = 0) in vec2 position;
 
@@ -20,14 +20,14 @@ void main()
 )shader";
 
 constexpr const char* FragmentShader = R"shader(
-#version 430
+#version 410
 
 in vec2 uv;
 
 layout(location = 0) out vec4 color;
 
-layout(location = 0) uniform sampler2D renderedTexture;
-layout(location = 1) uniform float dx;
+uniform sampler2D screen;
+uniform float dx;
 
 #define E 0.99
 #define Kernel vec3(0.2, 0.6, 0.2)
@@ -40,9 +40,9 @@ vec3 hit(vec3 v)
 void main()
 {
     vec2 delta = vec2(dx, 0.);
-    vec3 center = texture(renderedTexture, uv).rgb;
-    vec3 left = texture(renderedTexture, uv - delta).rgb;
-    vec3 right = texture(renderedTexture, uv + delta).rgb;
+    vec3 center = texture(screen, uv).rgb;
+    vec3 left = texture(screen, uv - delta).rgb;
+    vec3 right = texture(screen, uv + delta).rgb;
     
     vec3 c = (hit(center) + hit(center * .0625)) * 0.5;
     vec3 l = (hit(left) + hit(left * .0625)) * 0.5;
@@ -87,7 +87,9 @@ Renderer::Renderer() :
         !program.Link(vertex, fragment))
         exit(-1);
 
-    glProgramUniform1i(program, 0, 0);
+    program.PrepareLocations({"dx", "screen"});
+
+    glProgramUniform1i(program, program[1], 0);
 }
 
 Renderer::~Renderer()
@@ -119,8 +121,8 @@ void Renderer::BeginFrame(GLsizei width, GLsizei height)
             exit(-1);
         }
 
-        glUseProgram(program);
-        glProgramUniform1f(program, 1, 1.f / width);
+        //glUseProgram(program);
+        glProgramUniform1f(program, program[0], 1.f / width);
 
         projection = glm::ortho(-width / 2., width / 2., -height / 2., height / 2.);
 	}
